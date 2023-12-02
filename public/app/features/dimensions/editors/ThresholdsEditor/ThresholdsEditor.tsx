@@ -1,7 +1,6 @@
 import { css } from '@emotion/css';
 import { isNumber } from 'lodash';
 import React, { ChangeEvent, PureComponent } from 'react';
-
 import {
   GrafanaTheme2,
   SelectableValue,
@@ -10,8 +9,9 @@ import {
   ThresholdsConfig,
   ThresholdsMode,
   ThemeContext,
+  FieldMatcherID,
 } from '@grafana/data';
-import { Button, ColorPicker, colors, IconButton, Input, Label, RadioButtonGroup, stylesFactory } from '@grafana/ui';
+import { Button, ColorPicker, colors, IconButton, Input, Label, RadioButtonGroup, Select, stylesFactory, fieldMatchersUI } from '@grafana/ui';
 
 const modes: Array<SelectableValue<ThresholdsMode>> = [
   { value: ThresholdsMode.Absolute, label: 'Absolute', description: 'Pick thresholds based on the absolute values' },
@@ -23,6 +23,7 @@ const modes: Array<SelectableValue<ThresholdsMode>> = [
 ];
 
 export interface Props {
+  options: string[];
   thresholds: ThresholdsConfig;
   onChange: (thresholds: ThresholdsConfig) => void;
 }
@@ -142,6 +143,13 @@ export class ThresholdsEditor extends PureComponent<Props, State> {
     });
   };
 
+  onMatcherConfigChange = (matcherOption: unknown) => {
+    this.props.onChange({
+      ...this.props.thresholds,
+      label: matcherOption,
+    });
+  };
+
   renderInput(threshold: ThresholdWithKey, styles: ThresholdStyles, idx: number) {
     const isPercent = this.props.thresholds.mode === ThresholdsMode.Percentage;
 
@@ -203,7 +211,6 @@ export class ThresholdsEditor extends PureComponent<Props, State> {
   render() {
     const { thresholds } = this.props;
     const { steps } = this.state;
-
     return (
       <ThemeContext.Consumer>
         {(theme) => {
@@ -234,6 +241,24 @@ export class ThresholdsEditor extends PureComponent<Props, State> {
               <div>
                 <Label description="Percentage means thresholds relative to min & max">Thresholds mode</Label>
                 <RadioButtonGroup options={modes} onChange={this.onModeChanged} value={thresholds.mode} />
+              </div>
+              <div>
+                <Label description="Apply colorization by query label instead of value">Thresholds label</Label>
+                {thresholds.options !== undefined ? (
+                <Select
+                  className="width-30"
+                  value={thresholds.label ?? thresholds.options[0]}
+                  options={thresholds.options.map<SelectableValue<string>>((i) => ({ label: i, value: i, description: "threshold label"}))}
+                  onChange={this.onMatcherConfigChange}
+                />
+                ) : (
+                <Select
+                  className="width-30"
+                  value="val"
+                  defaultValue="defaultval"
+                  onChange={this.onMatcherConfigChange}
+                />
+                )}
               </div>
             </div>
           );

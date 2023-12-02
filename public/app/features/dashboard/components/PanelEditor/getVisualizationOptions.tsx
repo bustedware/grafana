@@ -21,6 +21,7 @@ import { OptionsPaneItemDescriptor } from './OptionsPaneItemDescriptor';
 import { getOptionOverrides } from './state/getOptionOverrides';
 import { OptionPaneRenderProps } from './types';
 import { setOptionImmutably, updateDefaultFieldConfigValue } from './utils';
+import { constructDataSourceExploreUrl } from 'app/features/datasources/utils';
 
 type categoryGetter = (categoryNames?: string[]) => OptionsPaneCategoryDescriptor;
 
@@ -125,6 +126,13 @@ export function getVisualizationOptions(props: OptionPaneRenderProps): OptionsPa
       category.props.itemsCount = fieldOption.getItemsCount(value);
     }
 
+    if (fieldOption.name == "Show thresholds") {
+      if (panel.getQueryRunner() !== undefined) {
+        let keys = panel?.getQueryRunner()?.getLastResult()?.series[0]?.fields[1]?.labels ?? [];
+        let labels = Object.keys(keys);
+        currentFieldConfig.defaults.thresholds.options = labels;
+      }
+    }
     category.addItem(
       new OptionsPaneItemDescriptor({
         title: fieldOption.name,

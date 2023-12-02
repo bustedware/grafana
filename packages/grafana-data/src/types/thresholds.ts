@@ -23,7 +23,7 @@ export enum ThresholdsMode {
  */
 export interface ThresholdsConfig {
   mode: ThresholdsMode;
-
+  options: string[] // array of query labels
   /**
    *  Must be sorted by 'value', first value is always -Infinity
    */

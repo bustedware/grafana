@@ -4,6 +4,7 @@ import { FieldConfigOptionsRegistry } from '../field/FieldConfigOptionsRegistry'
 import { fieldColorModeRegistry } from '../field/fieldColor';
 import { FieldColorConfigSettings } from '../field/overrides/processors';
 import { FieldColorModeId } from '../types/fieldColor';
+
 import {
   ConfigOverrideRule,
   DynamicConfigValue,
@@ -52,7 +53,6 @@ export function getPanelOptionsWithDefaults({
 
 function applyFieldConfigDefaults(existingFieldConfig: FieldConfigSource, plugin: PanelPlugin): FieldConfigSource {
   const pluginDefaults = plugin.fieldConfigDefaults;
-
   const result: FieldConfigSource = {
     defaults: mergeWith(
       {},
@@ -189,6 +189,10 @@ function adaptFieldColorMode(
 function fixThresholds(thresholds: ThresholdsConfig) {
   if (!thresholds.mode) {
     thresholds.mode = ThresholdsMode.Absolute;
+  }
+
+  if (!thresholds.options) {
+    thresholds.options = ['ov3rr1d3','0verrid3'];
   }
 
   if (!thresholds.steps) {
