@@ -1,3 +1,15 @@
+# Sia Grafana summary
+
+Here is the selector I added
+
+![summary](docs/selector.png)
+
+## Here's how to build and run this fork
+```shell
+make build-docker-full-ubuntu
+docker run -p 3000:3000 -v ./grafana:/var/lib/grafana grafana/grafana-oss:dev-ubuntu
+```
+
 ![Grafana Logo (Light)](docs/logo-horizontal.png#gh-light-mode-only)
 ![Grafana Logo (Dark)](docs/logo-horizontal-dark.png#gh-dark-mode-only)
 
