@@ -22,7 +22,9 @@ import (
 	"github.com/grafana/grafana/pkg/services/accesscontrol/migrator"
 	"github.com/grafana/grafana/pkg/services/accesscontrol/pluginutils"
 	"github.com/grafana/grafana/pkg/services/auth/identity"
+	"github.com/grafana/grafana/pkg/services/dashboards"
 	"github.com/grafana/grafana/pkg/services/featuremgmt"
+	"github.com/grafana/grafana/pkg/services/folder"
 	"github.com/grafana/grafana/pkg/services/user"
 	"github.com/grafana/grafana/pkg/setting"
 )
@@ -33,8 +35,13 @@ const (
 	cacheTTL = 10 * time.Second
 )
 
+var SharedWithMeFolderPermission = accesscontrol.Permission{
+	Action: dashboards.ActionFoldersRead,
+	Scope:  dashboards.ScopeFoldersProvider.GetResourceScopeUID(folder.SharedWithMeFolderUID),
+}
+
 func ProvideService(cfg *setting.Cfg, db db.DB, routeRegister routing.RouteRegister, cache *localcache.CacheService,
-	accessControl accesscontrol.AccessControl, features *featuremgmt.FeatureManager) (*Service, error) {
+	accessControl accesscontrol.AccessControl, features featuremgmt.FeatureToggles) (*Service, error) {
 	service := ProvideOSSService(cfg, database.ProvideService(db), cache, features)
 
 	api.NewAccessControlAPI(routeRegister, accessControl, service, features).RegisterAPIEndpoints()
@@ -55,7 +62,7 @@ func ProvideService(cfg *setting.Cfg, db db.DB, routeRegister routing.RouteRegis
 	return service, nil
 }
 
-func ProvideOSSService(cfg *setting.Cfg, store store, cache *localcache.CacheService, features *featuremgmt.FeatureManager) *Service {
+func ProvideOSSService(cfg *setting.Cfg, store store, cache *localcache.CacheService, features featuremgmt.FeatureToggles) *Service {
 	s := &Service{
 		cfg:      cfg,
 		store:    store,
@@ -86,7 +93,7 @@ type Service struct {
 	cache         *localcache.CacheService
 	registrations accesscontrol.RegistrationList
 	roles         map[string]*accesscontrol.RoleDTO
-	features      *featuremgmt.FeatureManager
+	features      featuremgmt.FeatureToggles
 }
 
 func (s *Service) GetUsageStats(_ context.Context) map[string]any {
@@ -113,6 +120,10 @@ func (s *Service) getUserPermissions(ctx context.Context, user identity.Requeste
 		if basicRole, ok := s.roles[builtin]; ok {
 			permissions = append(permissions, basicRole.Permissions...)
 		}
+	}
+
+	if s.features.IsEnabled(ctx, featuremgmt.FlagNestedFolders) {
+		permissions = append(permissions, SharedWithMeFolderPermission)
 	}
 
 	userID, err := identity.UserIdentifier(user.GetNamespacedID())
@@ -231,6 +242,9 @@ func (s *Service) DeclarePluginRoles(ctx context.Context, ID, name string, regs 
 // SearchUsersPermissions returns all users' permissions filtered by action prefixes
 func (s *Service) SearchUsersPermissions(ctx context.Context, user identity.Requester,
 	options accesscontrol.SearchOptions) (map[int64][]accesscontrol.Permission, error) {
+	timer := prometheus.NewTimer(metrics.MAccessSearchPermissionsSummary)
+	defer timer.ObserveDuration()
+
 	// Filter ram permissions
 	basicPermissions := map[string][]accesscontrol.Permission{}
 	for role, basicRole := range s.roles {
